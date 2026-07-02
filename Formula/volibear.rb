@@ -2,7 +2,7 @@ class Volibear < Formula
   desc "Local-first web manager for repo-scoped coding-agent harnesses"
   homepage "https://www.npmjs.com/package/volibear"
   url "https://registry.npmjs.org/volibear/-/volibear-0.1.0.tgz"
-  sha256 "6f404747c9cce47034c2c98df00d7845eaf57051e2e51118cf56c487bfc908ed"
+  sha256 "441a0bdb081bf5ff255be957d2c868763dfefca68e8659ead0e2a9c92e90ff72"
   license "MIT"
 
   depends_on "node"
