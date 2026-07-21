@@ -8,11 +8,16 @@ on:
 
 jobs:
   test-bot:
+    name: test-bot (${{ matrix.name }})
     strategy:
       matrix:
-        os: [ macos-15-intel, macos-26 ]
         include:
-          - os: ubuntu-latest
+          - name: macos-intel
+            os: macos-15-intel
+          - name: macos-arm
+            os: macos-26
+          - name: linux
+            os: ubuntu-latest
             container: ghcr.io/homebrew/brew@sha256:385b81985a7e94aaa31ae83bbe351e212b4c8869bb4d726a391979bc39a08a1c
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
