@@ -13,11 +13,14 @@ jobs:
       matrix:
         include:
           - name: macos-intel
-            os: macos-14
+            os: macos-15-intel
+            arch: x86_64
           - name: macos-arm
             os: macos-26
+            arch: arm64
           - name: linux
             os: ubuntu-latest
+            arch: x86_64
             container: ghcr.io/homebrew/brew@sha256:385b81985a7e94aaa31ae83bbe351e212b4c8869bb4d726a391979bc39a08a1c
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
@@ -40,13 +43,39 @@ jobs:
           key: ${{ matrix.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
           restore-keys: ${{ matrix.os }}-rubygems-
 
+      - name: Verify runner architecture
+        run: test "$(uname -m)" = "${{ matrix.arch }}"
+
       - run: brew test-bot --only-cleanup-before
 
       - run: brew test-bot --only-setup
 
       - run: brew test-bot --only-tap-syntax
+
+      - name: Detect Intel formulae
+        id: intel-formulae
+        if: github.event_name == 'pull_request' && matrix.name == 'macos-intel'
+        run: brew test-bot --only-formulae-detect
+
       - run: brew test-bot --only-formulae
-        if: github.event_name == 'pull_request'
+        if: >-
+          github.event_name == 'pull_request' &&
+          (matrix.name != 'macos-intel' ||
+          !contains(steps.intel-formulae.outputs.testing_formulae, 'griffinclark/tap/vbear'))
+
+      - name: Test Intel vbear with source-built Go
+        if: >-
+          github.event_name == 'pull_request' && matrix.name == 'macos-intel' &&
+          contains(steps.intel-formulae.outputs.testing_formulae, 'griffinclark/tap/vbear')
+        run: >-
+          brew test-bot --only-formulae --skip-dependents
+          --testing-formulae=go,${{ steps.intel-formulae.outputs.testing_formulae }}
+
+      - name: Remove prerequisite bottle artifacts
+        if: >-
+          github.event_name == 'pull_request' && matrix.name == 'macos-intel' &&
+          contains(steps.intel-formulae.outputs.testing_formulae, 'griffinclark/tap/vbear')
+        run: rm -f go--*.bottle.json go--*.bottle.tar.gz
 
       - name: Upload bottles as artifact
         if: always() && github.event_name == 'pull_request'
