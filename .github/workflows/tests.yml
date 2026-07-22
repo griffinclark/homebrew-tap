@@ -75,7 +75,14 @@ jobs:
         if: >-
           github.event_name == 'pull_request' && matrix.name == 'macos-intel' &&
           contains(steps.intel-formulae.outputs.testing_formulae, 'griffinclark/tap/vbear')
-        run: rm -f go--*.bottle.json go--*.bottle.tar.gz
+        shell: bash
+        run: |
+          rm -f go--*.bottle*.json go--*.bottle*.tar.gz
+          shopt -s nullglob
+          vbear_artifacts=(vbear--*.bottle*.json vbear--*.bottle*.tar.gz)
+          all_artifacts=(*.bottle.*)
+          test "${#vbear_artifacts[@]}" -eq 2
+          test "${#all_artifacts[@]}" -eq 2
 
       - name: Upload bottles as artifact
         if: always() && github.event_name == 'pull_request'
