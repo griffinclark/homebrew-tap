@@ -5,16 +5,9 @@
 class Vbear < Formula
   desc "Versioned control plane and local client for coding-agent harnesses"
   homepage "https://github.com/griffinclark/homebrew-tap"
-  url "https://github.com/griffinclark/homebrew-tap/releases/download/vbear-source-0.1.6/vbear_0.1.6_source.tar.gz"
-  sha256 "7ffe5284d788310246d958464082ff34c94323986aefe37bb012089727ec7d21"
+  url "https://github.com/griffinclark/homebrew-tap/releases/download/vbear-source-0.1.7/vbear_0.1.7_source.tar.gz"
+  sha256 "dd8583019ffb2d76c720ebc6388a13703c0f9d857fb95a40dc53a29372bf0431"
   license "MIT"
-
-  bottle do
-    root_url "https://github.com/griffinclark/homebrew-tap/releases/download/vbear-0.1.6"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "b6798c79701269a23b60b52984acbfcce1b562d066256a8c34630ade5a5aac47"
-    sha256 cellar: :any_skip_relocation, sequoia:      "401996da183a8578383447e68bfb7b6749adb2a90f41ebb1230c4ee32be6b269"
-    sha256 cellar: :any,                 x86_64_linux: "234502b1fe950f5a60f86730b8e4ecdc063a20178e6d57537377161e0bddd217"
-  end
 
   depends_on "go" => :build
 
