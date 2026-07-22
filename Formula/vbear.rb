@@ -9,6 +9,13 @@ class Vbear < Formula
   sha256 "77b5b4d36dfb74016e2bbc75f77fc7e4734e1694969989884d601ba0b500532c"
   license "MIT"
 
+  bottle do
+    root_url "https://github.com/griffinclark/homebrew-tap/releases/download/vbear-0.1.12"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "d3152f59e61acb9efa3c742a1356de574721bf736d619ab4ed2f403db86455bc"
+    sha256 cellar: :any_skip_relocation, sequoia:      "69d37666811d047bdc80ed61ef0d4e330dd815cbc719efc1e5ac98ddac64c732"
+    sha256 cellar: :any,                 x86_64_linux: "1f246b608dfe931089aa9faa0863b8991510003185d5bf8877def67c009b17d1"
+  end
+
   depends_on "go" => :build
 
   on_linux do
