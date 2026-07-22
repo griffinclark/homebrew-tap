@@ -28,9 +28,9 @@ jobs:
       - name: Set up git
         uses: Homebrew/actions/git-user-config@df4b09108a1de9d6f995fe68f302b3f68bd6d2ef # main, pinned 2026-07-20
 
-      - name: Pull bottles
+      - name: Apply verified pull request tree
         env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_LITERAL_PATHSPECS: "1"
           PULL_REQUEST: ${{ inputs.pull_request }}
           HEAD_SHA: ${{ inputs.head_sha }}
         run: |
@@ -42,7 +42,64 @@ jobs:
             echo "head_sha must be a full 40-character Git commit SHA" >&2
             exit 2
           fi
-          brew pr-pull --debug --tap="$GITHUB_REPOSITORY" --head-sha="$HEAD_SHA" "$PULL_REQUEST"
+
+          tap_path="$(brew --repository "$GITHUB_REPOSITORY")"
+          git -C "$tap_path" fetch --quiet --force origin "refs/pull/$PULL_REQUEST/head"
+          actual_head="$(git -C "$tap_path" rev-parse FETCH_HEAD)"
+          if [ "$actual_head" != "$HEAD_SHA" ]; then
+            echo "pull request #$PULL_REQUEST is at $actual_head, expected $HEAD_SHA" >&2
+            exit 1
+          fi
+          base_commit="$(git -C "$tap_path" merge-base HEAD "$HEAD_SHA")"
+
+          mapfile -t changed_files < <(git -C "$tap_path" diff --name-only --diff-filter=AM "$base_commit" "$HEAD_SHA")
+          mapfile -t all_changed_files < <(git -C "$tap_path" diff --name-only "$base_commit" "$HEAD_SHA")
+          if [ "${#changed_files[@]}" -eq 0 ] || [ "${#changed_files[@]}" -ne "${#all_changed_files[@]}" ]; then
+            echo "publishable pull requests must only add or modify formula or cask files" >&2
+            exit 1
+          fi
+          for file in "${changed_files[@]}"; do
+            case "$file" in
+              Formula/*.rb|Casks/*.rb) ;;
+              *)
+                echo "unexpected publish path: $file" >&2
+                exit 1
+                ;;
+            esac
+            mode="$(git -C "$tap_path" ls-tree "$HEAD_SHA" -- "$file" | awk '{ print $1 }')"
+            if [ "$mode" != "100644" ]; then
+              echo "publish path must be a regular non-executable file: $file" >&2
+              exit 1
+            fi
+          done
+          if ! git -C "$tap_path" diff --quiet "$base_commit" HEAD -- "${changed_files[@]}"; then
+            echo "current tap main changed a pull request formula or cask after the branches diverged" >&2
+            exit 1
+          fi
+
+          source_commit="$(git -C "$tap_path" log --no-merges -1 --format='%H' "$base_commit..$HEAD_SHA" -- "${changed_files[@]}")"
+          if [ -z "$source_commit" ]; then
+            echo "could not identify the source formula commit" >&2
+            exit 1
+          fi
+          source_author="$(git -C "$tap_path" show -s --format='%an <%ae>' "$source_commit")"
+          source_date="$(git -C "$tap_path" show -s --format='%aI' "$source_commit")"
+          source_subject="$(git -C "$tap_path" show -s --format='%s' "$source_commit")"
+
+          git -C "$tap_path" checkout "$HEAD_SHA" -- "${changed_files[@]}"
+          git -C "$tap_path" commit \
+            --author "$source_author" \
+            --date "$source_date" \
+            --message "$source_subject" \
+            -- "${changed_files[@]}"
+
+      - name: Pull bottles
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST: ${{ inputs.pull_request }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          brew pr-pull --debug --no-cherry-pick --tap="$GITHUB_REPOSITORY" --head-sha="$HEAD_SHA" "$PULL_REQUEST"
 
       - name: Push commits
         uses: Homebrew/actions/git-try-push@df4b09108a1de9d6f995fe68f302b3f68bd6d2ef # main, pinned 2026-07-20
